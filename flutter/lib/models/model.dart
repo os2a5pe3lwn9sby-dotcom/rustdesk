@@ -3485,9 +3485,10 @@ class CursorModel with ChangeNotifier {
     _displayOriginX = x;
     _displayOriginY = y;
     if (updateCursorPos) {
-      _x = x + 1;
-      _y = y + 1;
-      parent.target?.inputModel.moveMouse(x, y);
+      final rect = parent.target?.ffiModel.displaysRect();
+      _x = rect != null ? x + rect.width / 2 : x + 1;
+      _y = rect != null ? y + rect.height / 2 : y + 1;
+      parent.target?.inputModel.moveMouse(_x, _y);
     }
     parent.target?.canvasModel.resetOffset();
     notifyListeners();
@@ -3499,7 +3500,7 @@ class CursorModel with ChangeNotifier {
     _displayOriginY = y;
     _x = xCursor;
     _y = yCursor;
-    parent.target?.inputModel.moveMouse(x, y);
+    parent.target?.inputModel.moveMouse(_x, _y);
     notifyListeners();
   }
 
