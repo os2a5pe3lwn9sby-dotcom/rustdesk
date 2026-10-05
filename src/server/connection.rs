@@ -372,6 +372,8 @@ pub struct Connection {
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     start_cm_ipc_para: Option<StartCmIpcPara>,
     auto_disconnect_timer: Option<(Instant, u64)>,
+    #[cfg(target_os = "macos")]
+    last_mac_spaces: String,
     authed_conn_id: Option<self::raii::AuthedConnID>,
     file_remove_log_control: FileRemoveLogControl,
     last_supported_encoding: Option<SupportedEncoding>,
@@ -572,6 +574,8 @@ impl Connection {
                 tx_cm_stream_ready,
             }),
             auto_disconnect_timer: None,
+            #[cfg(target_os = "macos")]
+            last_mac_spaces: String::new(),
             authed_conn_id: None,
             file_remove_log_control: FileRemoveLogControl::new(id),
             last_supported_encoding: None,
@@ -644,6 +648,9 @@ impl Connection {
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         std::thread::spawn(move || Self::handle_input(_rx_input, tx_cloned));
         let mut second_timer = crate::rustdesk_interval(time::interval(Duration::from_secs(1)));
+        let mut mac_spaces_timer = crate::rustdesk_interval(time::interval(
+            Duration::from_millis(if cfg!(target_os = "macos") { 300 } else { 3_600_000 }),
+        ));
 
         #[cfg(feature = "unix-file-copy-paste")]
         let rx_clip_holder;
@@ -1063,6 +1070,10 @@ impl Connection {
                         }
                         _ => {}
                     }
+                }
+                _ = mac_spaces_timer.tick() => {
+                    #[cfg(target_os = "macos")]
+                    conn.send_mac_spaces_if_changed().await;
                 }
                 _ = second_timer.tick() => {
                     #[cfg(windows)]
@@ -5109,6 +5120,37 @@ impl Connection {
     #[inline]
     async fn send(&mut self, msg: Message) {
         allow_err!(self.stream.send(&msg).await);
+    }
+
+    // Only the patched Android client draws these; other clients never ask.
+    #[cfg(target_os = "macos")]
+    async fn send_mac_spaces_if_changed(&mut self) {
+        if !self.authorized
+            || !self.is_remote()
+            || self.lr.my_platform != hbb_common::whoami::Platform::Android.to_string()
+        {
+            return;
+        }
+        let names: Vec<String> = display_service::get_sync_displays()
+            .into_iter()
+            .map(|d| d.name)
+            .collect();
+        let Some(summary) = crate::platform::macos_spaces::spaces_summary(&names) else {
+            return;
+        };
+        if summary == self.last_mac_spaces {
+            return;
+        }
+        self.last_mac_spaces = summary.clone();
+        let mut misc = Misc::new();
+        misc.set_plugin_request(PluginRequest {
+            id: "mac-spaces".to_owned(),
+            content: summary.into_bytes().into(),
+            ..Default::default()
+        });
+        let mut msg = Message::new();
+        msg.set_misc(misc);
+        self.send(msg).await;
     }
 
     pub fn alive_conns() -> Vec<i32> {

@@ -1984,6 +1984,11 @@ impl<T: InvokeUiSession> Remote<T> {
                             );
                         }
                     }
+                    #[cfg(any(target_os = "android", target_os = "ios"))]
+                    Some(misc::Union::PluginRequest(p)) if p.id == "mac-spaces" => {
+                        self.handler
+                            .update_mac_spaces(&String::from_utf8_lossy(&p.content));
+                    }
                     #[cfg(all(feature = "flutter", feature = "plugin_framework"))]
                     #[cfg(not(any(target_os = "android", target_os = "ios")))]
                     Some(misc::Union::PluginRequest(p)) => {

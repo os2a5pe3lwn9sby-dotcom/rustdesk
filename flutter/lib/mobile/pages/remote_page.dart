@@ -9,6 +9,7 @@ import 'package:flutter_hbb/mobile/widgets/floating_mouse.dart';
 import 'package:flutter_hbb/mobile/widgets/floating_mouse_widgets.dart';
 import 'package:flutter_hbb/mobile/widgets/gesture_help.dart';
 import 'package:flutter_hbb/mobile/widgets/control_panel.dart';
+import 'package:flutter_hbb/mobile/widgets/mac_space_indicator.dart';
 import 'package:flutter_hbb/mobile/widgets/three_finger_scroll_setting.dart';
 import 'package:flutter_hbb/models/chat_model.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
@@ -584,6 +585,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
 
   void _switchDesktopSpace(bool left) {
     bind.sessionSwitchMacSpace(sessionId: sessionId, left: left);
+    gFFI.ffiModel.macSpaces.nudge(gFFI.ffiModel.pi.currentDisplay, left);
   }
 
   List<ControlPanelItem> _panelItems(FfiModel ffiModel) {
@@ -652,9 +654,18 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
             alignment: Alignment.bottomCenter,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 16),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
+              child: Row(children: [
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: MacSpaceIndicator(
+                        model: ffiModel.macSpaces,
+                        display: ffiModel.pi.currentDisplay),
+                  ),
+                ),
                 _spaceButton(Icons.chevron_left, true),
                 _spaceButton(Icons.chevron_right, false),
+                const Expanded(child: SizedBox.shrink()),
               ]),
             ),
           ),

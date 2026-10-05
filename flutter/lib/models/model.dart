@@ -17,6 +17,7 @@ import 'package:flutter_hbb/models/chat_model.dart';
 import 'package:flutter_hbb/models/cm_file_model.dart';
 import 'package:flutter_hbb/models/file_model.dart';
 import 'package:flutter_hbb/models/group_model.dart';
+import 'package:flutter_hbb/models/mac_spaces_model.dart';
 import 'package:flutter_hbb/models/peer_model.dart';
 import 'package:flutter_hbb/models/peer_tab_model.dart';
 import 'package:flutter_hbb/models/printer_model.dart';
@@ -116,6 +117,7 @@ class FfiModel with ChangeNotifier {
   int? pendingMonitorRestore;
   Timer? _pendingRestoreTimer;
   Rect? _rect;
+  final macSpaces = MacSpacesModel();
 
   var _inputBlocked = false;
   final _permissions = <String, bool>{};
@@ -251,6 +253,7 @@ class FfiModel with ChangeNotifier {
 
   clear() {
     _pi = PeerInfo();
+    macSpaces.clear();
     lastUserDisplay = null;
     _cancelPendingMonitorRestore();
     _secure = null;
@@ -374,6 +377,8 @@ class FfiModel with ChangeNotifier {
             .receive(int.parse(evt['id'] as String), evt['text'] ?? '');
       } else if (name == 'terminal_response') {
         parent.target?.routeTerminalResponse(evt);
+      } else if (name == 'mac_spaces') {
+        macSpaces.update(evt['value'] ?? '');
       } else if (name == 'file_dir') {
         parent.target?.fileModel.receiveFileDir(evt);
       } else if (name == 'empty_dirs') {

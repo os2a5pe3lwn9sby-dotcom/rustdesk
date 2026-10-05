@@ -941,6 +941,10 @@ impl InvokeUiSession for FlutterHandler {
         );
     }
 
+    fn update_mac_spaces(&self, data: &str) {
+        self.push_event("mac_spaces", &[("value", data)], &[]);
+    }
+
     fn set_platform_additions(&self, data: &str) {
         self.push_event(
             "sync_platform_additions",

@@ -2,7 +2,7 @@ name: Android center-cursor APK
 
 on:
   push:
-    branches: [center-cursor]
+    branches: [center-cursor, claude/intelligent-carson-qg37m3]
   workflow_dispatch:
 
 permissions:
