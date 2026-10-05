@@ -658,6 +658,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                 Expanded(
                   child: Align(
                     alignment: Alignment.centerRight,
+                    heightFactor: 1,
                     child: MacSpaceIndicator(
                         model: ffiModel.macSpaces,
                         display: ffiModel.pi.currentDisplay),
