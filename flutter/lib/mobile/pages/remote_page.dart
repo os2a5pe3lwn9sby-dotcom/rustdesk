@@ -63,6 +63,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
   bool _showBar = !isWebDesktop;
   bool _showGestureHelp = false;
   String _value = '';
+  bool _composingHeld = false;
   Orientation? _currentOrientation;
   final _uniqueKey = UniqueKey();
   Timer? _iosKeyboardWorkaroundTimer;
@@ -374,7 +375,38 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     if (isIOS) {
       _handleIOSSoftKeyboardInput(newValue);
     } else {
+      final composing = _textController.value.composing;
+      if (_textController.value.isComposingRangeValid &&
+          !composing.isCollapsed) {
+        _composingHeld = true;
+        return;
+      }
+      if (_composingHeld) {
+        _composingHeld = false;
+        _handleComposedCommit(newValue);
+        return;
+      }
       _handleNonIOSSoftKeyboardInput(newValue);
+    }
+  }
+
+  void _handleComposedCommit(String newValue) {
+    final oldValue = _value;
+    _value = newValue;
+    var common = 0;
+    while (common < oldValue.length &&
+        common < newValue.length &&
+        oldValue[common] == newValue[common]) {
+      ++common;
+    }
+    for (var i = 0; i < oldValue.length - common; ++i) {
+      inputModel.inputKey('VK_BACK');
+    }
+    final newStr = newValue.substring(common);
+    if (newStr.length > 1 || newStr.runes.any((r) => r > 0x7f)) {
+      bind.sessionInputString(sessionId: sessionId, value: newStr);
+    } else if (newStr.isNotEmpty) {
+      inputChar(newStr);
     }
   }
 
