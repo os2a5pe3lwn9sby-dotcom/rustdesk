@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -15,6 +16,29 @@ const double _kPanelGap = 8;
 const Duration _kDoubleTapGap = Duration(milliseconds: 350);
 const Duration _kTapMaxDuration = Duration(milliseconds: 250);
 const double _kTapSlop = 12;
+
+/// Wins the gesture arena as soon as a pointer lands on the handle, so the
+/// remote canvas's recognizers above it never see the touch as a drag.
+class _ClaimRecognizer extends OneSequenceGestureRecognizer {
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    startTrackingPointer(event.pointer, event.transform);
+    resolve(GestureDisposition.accepted);
+  }
+
+  @override
+  void handleEvent(PointerEvent event) {
+    if (event is PointerUpEvent || event is PointerCancelEvent) {
+      stopTrackingPointer(event.pointer);
+    }
+  }
+
+  @override
+  void didStopTrackingLastPointer(int pointer) {}
+
+  @override
+  String get debugDescription => 'control panel handle';
+}
 
 class ControlPanelItem {
   final IconData icon;
@@ -176,27 +200,36 @@ class _ControlPanelHandleState extends State<ControlPanelHandle> {
     }
   }
 
-  Widget _handle() => Listener(
+  Widget _handle() => RawGestureDetector(
         behavior: HitTestBehavior.opaque,
-        onPointerDown: _onPointerDown,
-        onPointerMove: _onPointerMove,
-        onPointerUp: _onPointerUp,
-        onPointerCancel: _onPointerCancel,
-        child: Container(
-          width: _kHandleWidth,
-          height: _kHandleHeight,
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            border: Border.all(
-                color: _moving ? MyTheme.accent : Colors.black26,
-                width: _moving ? 4 : 1),
-            boxShadow: const [
-              BoxShadow(color: Colors.black38, blurRadius: 6),
-            ],
+        gestures: {
+          _ClaimRecognizer:
+              GestureRecognizerFactoryWithHandlers<_ClaimRecognizer>(
+                  () => _ClaimRecognizer(), (_) {}),
+        },
+        child: Listener(
+          behavior: HitTestBehavior.opaque,
+          onPointerDown: _onPointerDown,
+          onPointerMove: _onPointerMove,
+          onPointerUp: _onPointerUp,
+          onPointerCancel: _onPointerCancel,
+          child: Opacity(
+            opacity: _moving || _open ? 1 : 0.55,
+            child: Container(
+              width: _kHandleWidth,
+              height: _kHandleHeight,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                    color: _moving ? MyTheme.accent : Colors.white54,
+                    width: _moving ? 4 : 1.5),
+              ),
+              child: SvgPicture.asset('assets/icon.svg',
+                  colorFilter: svgColor(Colors.white)),
+            ),
           ),
-          child: SvgPicture.asset('assets/icon.svg'),
         ),
       );
 
