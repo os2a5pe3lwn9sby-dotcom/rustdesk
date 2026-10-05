@@ -582,16 +582,8 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     );
   }
 
-  void _switchDesktopSpace(String key) {
-    bind.sessionInputKey(
-        sessionId: sessionId,
-        name: key,
-        down: false,
-        press: true,
-        alt: false,
-        ctrl: true,
-        shift: false,
-        command: false);
+  void _switchDesktopSpace(bool left) {
+    bind.sessionSwitchMacSpace(sessionId: sessionId, left: left);
   }
 
   Widget getBottomAppBar() {
@@ -649,17 +641,18 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                                 onPressed: () => setState(
                                     () => _showGestureHelp = !_showGestureHelp),
                               ),
-                              IconButton(
-                                color: Colors.white,
-                                icon: Icon(Icons.chevron_left),
-                                onPressed: () => _switchDesktopSpace('VK_LEFT'),
-                              ),
-                              IconButton(
-                                color: Colors.white,
-                                icon: Icon(Icons.chevron_right),
-                                onPressed: () =>
-                                    _switchDesktopSpace('VK_RIGHT'),
-                              ),
+                              if (gFFI.ffiModel.pi.platform == kPeerPlatformMacOS) ...[
+                                IconButton(
+                                  color: Colors.white,
+                                  icon: Icon(Icons.chevron_left),
+                                  onPressed: () => _switchDesktopSpace(true),
+                                ),
+                                IconButton(
+                                  color: Colors.white,
+                                  icon: Icon(Icons.chevron_right),
+                                  onPressed: () => _switchDesktopSpace(false),
+                                ),
+                              ],
                             ]) +
                   (isWeb
                       ? []

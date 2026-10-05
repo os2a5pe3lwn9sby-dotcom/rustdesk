@@ -912,6 +912,17 @@ impl<T: InvokeUiSession> Session<T> {
         }
     }
 
+    pub fn switch_mac_space(&self, left: bool) {
+        let arrow: u32 = if left { 0x7B } else { 0x7C };
+        for (code, down) in [(0x3B_u32, true), (arrow, true), (arrow, false), (0x3B, false)] {
+            let mut key_event = KeyEvent::new();
+            key_event.set_chr(code);
+            key_event.down = down;
+            key_event.mode = KeyboardMode::Map.into();
+            self.send_key_event(&key_event);
+        }
+    }
+
     pub fn input_string(&self, value: &str) {
         let mut key_event = KeyEvent::new();
         key_event.set_seq(value.to_owned());

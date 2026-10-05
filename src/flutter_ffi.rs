@@ -652,6 +652,12 @@ pub fn session_input_key(
     }
 }
 
+pub fn session_switch_mac_space(session_id: SessionID, left: bool) {
+    if let Some(session) = sessions::get_session_by_session_id(&session_id) {
+        session.switch_mac_space(left);
+    }
+}
+
 pub fn session_input_string(session_id: SessionID, value: String) {
     if let Some(session) = sessions::get_session_by_session_id(&session_id) {
         // #[cfg(any(target_os = "android", target_os = "ios"))]
