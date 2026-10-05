@@ -151,10 +151,19 @@ jobs:
           mkdir -p ./flutter/android/app/src/main/jniLibs/arm64-v8a
           cp ./target/${{ env.TARGET }}/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/arm64-v8a/librustdesk.so
 
-      - name: Use fixed debug keystore
+      - name: Decrypt signing keystore
+        env:
+          KEYSTORE_PASSPHRASE: ${{ secrets.KEYSTORE_PASSPHRASE }}
         run: |
+          if [ -z "$KEYSTORE_PASSPHRASE" ]; then
+            echo "Secret KEYSTORE_PASSPHRASE is not set"
+            exit 1
+          fi
           mkdir -p ~/.android
-          cp .github/android-center-cursor.keystore ~/.android/debug.keystore
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 \
+            -in .github/android-center-cursor.keystore.enc \
+            -out ~/.android/debug.keystore \
+            -pass env:KEYSTORE_PASSPHRASE
 
       - name: Build rustdesk
         shell: bash
