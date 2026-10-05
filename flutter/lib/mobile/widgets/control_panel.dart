@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 
 const String _kOptionControlPanelPos = 'control-panel-pos';
-const double _kHandleWidth = 36;
-const double _kHandleHeight = 72;
+const double _kHandleWidth = 60;
+const double _kHandleHeight = 60;
+const Duration _kOpenDelay = Duration(milliseconds: 100);
 const double _kItemHeight = 52;
 const double _kPanelGap = 8;
 const Duration _kDoubleTapGap = Duration(milliseconds: 350);
@@ -16,12 +20,14 @@ class ControlPanelItem {
   final IconData icon;
   final String label;
   final VoidCallback onSelect;
-  const ControlPanelItem(this.icon, this.label, this.onSelect);
+  final Color color;
+  const ControlPanelItem(this.icon, this.label, this.onSelect,
+      {this.color = Colors.white});
 }
 
-/// A movable handle. Long-press to open the panel, slide to an item and
-/// release to select it. Double-tap and keep the finger down to drag the
-/// handle to another place; the place is remembered.
+/// A movable handle. Touch and hold to open the panel at once, slide to an
+/// item and release to select it. Double-tap and keep the finger down to drag
+/// the handle to another place; the place is remembered.
 class ControlPanelHandle extends StatefulWidget {
   final List<ControlPanelItem> items;
   const ControlPanelHandle({Key? key, required this.items}) : super(key: key);
@@ -42,6 +48,8 @@ class _ControlPanelHandleState extends State<ControlPanelHandle> {
   DateTime? _lastTapUp;
   DateTime? _downAt;
   Offset? _downPos;
+  int? _pointer;
+  Timer? _openTimer;
 
   @override
   void initState() {
@@ -81,26 +89,46 @@ class _ControlPanelHandleState extends State<ControlPanelHandle> {
   }
 
   void _onPointerDown(PointerDownEvent e) {
+    if (_pointer != null) return;
+    _pointer = e.pointer;
     _downAt = DateTime.now();
     _downPos = e.position;
     final last = _lastTapUp;
     if (last != null && _downAt!.difference(last) < _kDoubleTapGap) {
       HapticFeedback.mediumImpact();
       setState(() => _moving = true);
+      return;
     }
+    _openTimer = Timer(_kOpenDelay, () {
+      HapticFeedback.mediumImpact();
+      setState(() => _open = true);
+    });
   }
 
   void _onPointerMove(PointerMoveEvent e) {
-    if (_moving) _moveTo(e.position);
+    if (e.pointer != _pointer) return;
+    if (_moving) {
+      _moveTo(e.position);
+    } else if (_open) {
+      _updateHover(e.position);
+    }
   }
 
   void _onPointerUp(PointerUpEvent e) {
+    if (e.pointer != _pointer) return;
+    _pointer = null;
+    _openTimer?.cancel();
     if (_moving) {
       _lastTapUp = null;
       setState(() => _moving = false);
       bind.mainSetLocalOption(
           key: _kOptionControlPanelPos,
           value: '${_fx.toStringAsFixed(4)},${_fy.toStringAsFixed(4)}');
+      return;
+    }
+    if (_open) {
+      _lastTapUp = null;
+      _close(select: true);
       return;
     }
     final downAt = _downAt;
@@ -113,8 +141,12 @@ class _ControlPanelHandleState extends State<ControlPanelHandle> {
   }
 
   void _onPointerCancel(PointerCancelEvent e) {
+    if (e.pointer != _pointer) return;
+    _pointer = null;
+    _openTimer?.cancel();
     _lastTapUp = null;
     if (_moving) setState(() => _moving = false);
+    if (_open) _close();
   }
 
   void _updateHover(Offset global) {
@@ -145,35 +177,26 @@ class _ControlPanelHandleState extends State<ControlPanelHandle> {
   }
 
   Widget _handle() => Listener(
+        behavior: HitTestBehavior.opaque,
         onPointerDown: _onPointerDown,
         onPointerMove: _onPointerMove,
         onPointerUp: _onPointerUp,
         onPointerCancel: _onPointerCancel,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onLongPressStart: (d) {
-            if (_moving) return;
-            HapticFeedback.mediumImpact();
-            setState(() => _open = true);
-          },
-          onLongPressMoveUpdate: (d) {
-            if (_open) _updateHover(d.globalPosition);
-          },
-          onLongPressEnd: (_) {
-            if (_open) _close(select: true);
-          },
-          onLongPressCancel: () {
-            if (_open) _close();
-          },
-          child: Container(
-            width: _kHandleWidth,
-            height: _kHandleHeight,
-            decoration: BoxDecoration(
-              color: _moving ? MyTheme.accent : Colors.black38,
-              borderRadius: BorderRadius.circular(_kHandleWidth / 2),
-            ),
-            child: const Icon(Icons.drag_indicator, color: Colors.white70),
+        child: Container(
+          width: _kHandleWidth,
+          height: _kHandleHeight,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(
+                color: _moving ? MyTheme.accent : Colors.black26,
+                width: _moving ? 4 : 1),
+            boxShadow: const [
+              BoxShadow(color: Colors.black38, blurRadius: 6),
+            ],
           ),
+          child: SvgPicture.asset('assets/icon.svg'),
         ),
       );
 
@@ -194,17 +217,23 @@ class _ControlPanelHandleState extends State<ControlPanelHandle> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(widget.items[i].icon, color: Colors.white),
+                    Icon(widget.items[i].icon, color: widget.items[i].color),
                     const SizedBox(width: 12),
                     Text(widget.items[i].label,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 16)),
+                        style: TextStyle(
+                            color: widget.items[i].color, fontSize: 16)),
                   ],
                 ),
               ),
           ],
         ),
       );
+
+  @override
+  void dispose() {
+    _openTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

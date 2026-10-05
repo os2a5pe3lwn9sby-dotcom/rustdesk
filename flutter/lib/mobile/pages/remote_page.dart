@@ -617,7 +617,8 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
         setState(() => _showEdit = false);
         showActions(widget.id);
       }),
-      ControlPanelItem(Icons.clear, '切断', () => clientClose(sessionId, gFFI)),
+      ControlPanelItem(Icons.clear, '切断', () => clientClose(sessionId, gFFI),
+          color: Colors.redAccent),
     ];
   }
 
