@@ -952,6 +952,24 @@ pub fn check_software_update() {
 // Because the url is always `https://api.rustdesk.com/version/latest`.
 #[tokio::main(flavor = "current_thread")]
 pub async fn do_check_software_update() -> hbb_common::ResultType<()> {
+    if let Some(build) = crate::fork_update::current_build() {
+        let response_url = crate::fork_update::newer_release_url(build)
+            .await?
+            .unwrap_or_default();
+        #[cfg(feature = "flutter")]
+        {
+            if !response_url.is_empty() {
+                let mut m = HashMap::new();
+                m.insert("name", "check_software_update_finish");
+                m.insert("url", &response_url);
+                if let Ok(data) = serde_json::to_string(&m) {
+                    let _ = crate::flutter::push_global_event(crate::flutter::APP_TYPE_MAIN, data);
+                }
+            }
+        }
+        *SOFTWARE_UPDATE_URL.lock().unwrap() = response_url;
+        return Ok(());
+    }
     let (request, url) =
         hbb_common::version_check_request(hbb_common::VER_TYPE_RUSTDESK_CLIENT.to_string());
     let proxy_conf = Config::get_socks();

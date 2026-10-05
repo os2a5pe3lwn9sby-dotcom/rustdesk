@@ -14,7 +14,8 @@ env:
   VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
   VCPKG_COMMIT_ID: "120deac3062162151622ca4860575a33844ba10b"
   VERSION: "1.4.9"
-  RELEASE_TAG: center-cursor-macos-1.4.9
+  RELEASE_TAG: macos-b${{ github.run_number }}
+  FORK_BUILD: ${{ github.run_number }}
 
 jobs:
   generate-bridge:
@@ -114,12 +115,12 @@ jobs:
           CREATE_DMG="$(command -v create-dmg)"
           CREATE_DMG="$(readlink -f "$CREATE_DMG")"
           sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG"
-          create-dmg --icon "RustDesk.app" 200 190 --hide-extension "RustDesk.app" --window-size 800 400 --app-drop-link 600 185 rustdesk-${{ env.VERSION }}-center-cursor-aarch64.dmg ./flutter/build/macos/Build/Products/Release/RustDesk.app
+          create-dmg --icon "RustDesk.app" 200 190 --hide-extension "RustDesk.app" --window-size 800 400 --app-drop-link 600 185 rustdesk-${{ env.RELEASE_TAG }}-aarch64.dmg ./flutter/build/macos/Build/Products/Release/RustDesk.app
 
       - name: Publish DMG to GitHub Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          name: RustDesk ${{ env.VERSION }} center-cursor (macOS arm64)
+          name: RustDesk ${{ env.VERSION }} center-cursor macOS build ${{ github.run_number }}
           prerelease: true
-          files: rustdesk-${{ env.VERSION }}-center-cursor-aarch64.dmg
+          files: rustdesk-${{ env.RELEASE_TAG }}-aarch64.dmg

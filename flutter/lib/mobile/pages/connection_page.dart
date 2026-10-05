@@ -124,7 +124,11 @@ class _ConnectionPageState extends State<ConnectionPage> {
         ? const SizedBox(height: 0)
         : InkWell(
             onTap: () async {
-              final url = 'https://rustdesk.com/download';
+              // Fork releases are "android-b<N>" with the APK named after the tag.
+              final tag = updateUrl.substring(updateUrl.lastIndexOf('/') + 1);
+              final url = tag.startsWith('android-b')
+                  ? '${updateUrl.replaceFirst('/tag/', '/download/')}/rustdesk-$tag-arm64-v8a.apk'
+                  : 'https://rustdesk.com/download';
               // https://pub.dev/packages/url_launcher#configuration
               // https://developer.android.com/training/package-visibility/use-cases#open-urls-custom-tabs
               //
