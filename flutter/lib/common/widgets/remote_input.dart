@@ -10,6 +10,7 @@ import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/models/model.dart';
 import 'package:flutter_hbb/models/input_model.dart';
+import 'package:flutter_hbb/common/three_finger_scroll.dart';
 
 import './gestures.dart';
 
@@ -517,7 +518,7 @@ class _RawTouchGestureDetectorRegionState
   get onThreeFingerVerticalDragUpdate => ffi.ffiModel.isPeerAndroid
       ? null
       : (d) {
-          _mouseScrollIntegral += d.delta.dy / 4;
+          _mouseScrollIntegral += d.delta.dy / threeFingerScrollDivisor();
           if (_mouseScrollIntegral > 1) {
             inputModel.scroll(1);
             _mouseScrollIntegral = 0;

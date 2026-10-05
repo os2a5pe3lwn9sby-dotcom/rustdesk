@@ -8,6 +8,8 @@ import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/mobile/widgets/floating_mouse.dart';
 import 'package:flutter_hbb/mobile/widgets/floating_mouse_widgets.dart';
 import 'package:flutter_hbb/mobile/widgets/gesture_help.dart';
+import 'package:flutter_hbb/mobile/widgets/control_panel.dart';
+import 'package:flutter_hbb/mobile/widgets/three_finger_scroll_setting.dart';
 import 'package:flutter_hbb/models/chat_model.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:flutter_svg/svg.dart';
@@ -467,9 +469,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
 
   Widget _bottomWidget() => _showGestureHelp
       ? getGestureHelp()
-      : (_showBar && gFFI.ffiModel.pi.displays.isNotEmpty
-          ? getBottomAppBar()
-          : Offstage());
+      : Offstage();
 
   @override
   Widget build(BuildContext context) {
@@ -584,6 +584,81 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
 
   void _switchDesktopSpace(bool left) {
     bind.sessionSwitchMacSpace(sessionId: sessionId, left: left);
+  }
+
+  List<ControlPanelItem> _panelItems(FfiModel ffiModel) {
+    final canType = !(isWebDesktop || ffiModel.viewOnly || !ffiModel.keyboard);
+    return [
+      if (canType)
+        ControlPanelItem(Icons.keyboard, 'キーボード', openKeyboard),
+      if (canType && ffiModel.isPeerAndroid)
+        ControlPanelItem(Icons.build, '操作ツール',
+            () => gFFI.dialogManager.toggleMobileActionsOverlay(ffi: gFFI)),
+      if (canType && !ffiModel.isPeerAndroid)
+        ControlPanelItem(
+            ffiModel.touchMode ? Icons.touch_app : Icons.mouse,
+            '操作方法',
+            () => setState(() => _showGestureHelp = !_showGestureHelp)),
+      if (!isWeb)
+        ControlPanelItem(Icons.message, 'チャット', () async {
+          final supportVoiceCall =
+              await gFFI.invokeMethod("get_value", "KEY_IS_SUPPORT_VOICE_CALL");
+          if (isAndroid && supportVoiceCall == true) {
+            showChatOptions(widget.id);
+          } else {
+            onPressedTextChat(widget.id);
+          }
+        }),
+      ControlPanelItem(Icons.tv, '表示設定', () {
+        setState(() => _showEdit = false);
+        showOptions(context, widget.id, gFFI.dialogManager);
+      }),
+      ControlPanelItem(Icons.more_vert, 'メニュー', () {
+        setState(() => _showEdit = false);
+        showActions(widget.id);
+      }),
+      ControlPanelItem(Icons.clear, '切断', () => clientClose(sessionId, gFFI)),
+    ];
+  }
+
+  Widget _spaceButton(IconData icon, bool left) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Material(
+          color: Colors.black38,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () => _switchDesktopSpace(left),
+            child: SizedBox(
+              width: 52,
+              height: 52,
+              child: Icon(icon, color: Colors.white, size: 30),
+            ),
+          ),
+        ),
+      );
+
+  Widget _controlOverlays() {
+    return Consumer<FfiModel>(builder: (context, ffiModel, _) {
+      if (ffiModel.pi.displays.isEmpty) return const SizedBox.shrink();
+      final showSpaceButtons = ffiModel.pi.platform == kPeerPlatformMacOS &&
+          ffiModel.keyboard &&
+          !ffiModel.viewOnly;
+      return Stack(children: [
+        ControlPanelHandle(items: _panelItems(ffiModel)),
+        if (showSpaceButtons)
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                _spaceButton(Icons.chevron_left, true),
+                _spaceButton(Icons.chevron_right, false),
+              ]),
+            ),
+          ),
+      ]);
+    });
   }
 
   Widget getBottomAppBar() {
@@ -717,6 +792,7 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
             KeyHelpTools(
                 keyboardIsVisible: keyboardIsVisible,
                 showGestureHelp: _showGestureHelp),
+            _controlOverlays(),
             SizedBox(
               width: 0,
               height: 0,
@@ -1469,7 +1545,13 @@ void showOptions(
               radios +
               popupDialogMenus +
               toggles +
-              [privacyModeWidget]),
+              [privacyModeWidget] +
+              [
+                if (!gFFI.ffiModel.isPeerAndroid) ...[
+                  const Divider(color: MyTheme.border),
+                  const ThreeFingerScrollSetting(),
+                ]
+              ]),
     );
   }, clickMaskDismiss: true, backDismiss: true).then((value) {
     _disableAndroidSoftKeyboard();
