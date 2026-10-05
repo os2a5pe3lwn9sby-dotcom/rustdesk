@@ -550,6 +550,18 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
     );
   }
 
+  void _switchDesktopSpace(String key) {
+    bind.sessionInputKey(
+        sessionId: sessionId,
+        name: key,
+        down: false,
+        press: true,
+        alt: false,
+        ctrl: true,
+        shift: false,
+        command: false);
+  }
+
   Widget getBottomAppBar() {
     final ffiModel = Provider.of<FfiModel>(context);
     return BottomAppBar(
@@ -604,6 +616,17 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                                     : Icons.mouse),
                                 onPressed: () => setState(
                                     () => _showGestureHelp = !_showGestureHelp),
+                              ),
+                              IconButton(
+                                color: Colors.white,
+                                icon: Icon(Icons.chevron_left),
+                                onPressed: () => _switchDesktopSpace('VK_LEFT'),
+                              ),
+                              IconButton(
+                                color: Colors.white,
+                                icon: Icon(Icons.chevron_right),
+                                onPressed: () =>
+                                    _switchDesktopSpace('VK_RIGHT'),
                               ),
                             ]) +
                   (isWeb
